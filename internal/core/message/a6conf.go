@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type Labels struct {
+	ServiceName   string `json:"service_name,omitempty"`
+	DiscoveryType string `json:"discovery_type,omitempty"`
+}
+
 type UpstreamArg struct {
 	NamespaceID string                 `json:"namespace_id,omitempty"`
 	GroupName   string                 `json:"group_name,omitempty"`
@@ -103,7 +108,7 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 		}
 
 		if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
-			all["_"+tagName] = val.Interface()
+			// all["_"+tagName] = val.Interface()
 			delete(all, tagName)
 			continue
 		}
@@ -175,6 +180,7 @@ func NewUpstreams(value []byte) (A6Conf, error) {
 }
 
 type Routes struct {
+	Labels       Labels                 `json:"labels"`
 	Upstream     Upstream               `json:"upstream"`
 	All          map[string]interface{} `json:"-"`
 	hasNodesAttr bool
@@ -206,10 +212,20 @@ func NewRoutes(value []byte) (A6Conf, error) {
 	routes := &Routes{
 		All: make(map[string]interface{}),
 	}
+
+	// println("===", string(value))
+
 	err := unmarshal(value, routes)
 	if err != nil {
 		return nil, err
 	}
+
+	routes.Upstream.ServiceName = routes.Labels.ServiceName
+	routes.Upstream.DiscoveryType = routes.Labels.DiscoveryType
+
+	// if routes.Upstream.ServiceName != "" {
+	// 	println(routes.Upstream.ServiceName)
+	// }
 
 	if routes.Upstream.Nodes != nil {
 		routes.hasNodesAttr = true
