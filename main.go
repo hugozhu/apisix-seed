@@ -47,7 +47,7 @@ func initLogger(logConf *conf.Log) error {
 }
 
 func main() {
-	println("===========starting 123============")
+	println("=========== starting ============")
 
 	conf.InitConf()
 

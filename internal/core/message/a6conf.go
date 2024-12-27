@@ -6,6 +6,15 @@ import (
 	"strings"
 )
 
+// Sample route config
+// "labels":
+// {
+// 	"discovery_args.group_name": "group_name",
+// 	"discovery_args.namespace_id": "test_name",
+// 	"discovery_type": "nacos",
+// 	"service_name": "test-service"
+// },
+
 type Labels struct {
 	DiscoveryType            string `json:"discovery_type,omitempty"`
 	ServiceName              string `json:"service_name,omitempty"`
