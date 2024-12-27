@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -86,7 +87,10 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 		v = v.Elem()
 	}
 
+	println(fmt.Printf("===========Identity of v: %v %v\n", v.Type(), v.Type().Name()))
+
 	typ := v.Type()
+
 	fieldNum := typ.NumField()
 	for i := 0; i < fieldNum; i++ {
 		field := typ.Field(i)
