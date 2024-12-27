@@ -2,14 +2,15 @@ package message
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 )
 
 type Labels struct {
-	DiscoveryType string `json:"discovery_type,omitempty"`
-	ServiceName   string `json:"service_name,omitempty"`
+	DiscoveryType            string `json:"discovery_type,omitempty"`
+	ServiceName              string `json:"service_name,omitempty"`
+	DiscoveryArgsNamespaceID string `json:"discovery_args.namespace_id,omitempty"`
+	DiscoveryArgsGroupName   string `json:"discovery_args.group_name,omitempty"`
 }
 
 type UpstreamArg struct {
@@ -87,8 +88,6 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 		v = v.Elem()
 	}
 
-	println(fmt.Printf("===========Identity of v: %v %v\n", v.Type(), v.Type().Name()))
-
 	typ := v.Type()
 
 	fieldNum := typ.NumField()
@@ -111,9 +110,9 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 			continue
 		}
 
-		if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
-			typStr := typ.String()
-			if typStr == "message.Upstream" {
+		if fieldName == "DiscoveryType" || fieldName == "ServiceName" || fieldName == "DiscoveryArgs" {
+			name := typ.Name()
+			if name == "Upstream" {
 				// all["_"+tagName] = val.Interface()
 				delete(all, tagName)
 				continue
@@ -203,14 +202,14 @@ func (routes *Routes) GetAll() *map[string]interface{} {
 }
 
 func (routes *Routes) Marshal() ([]byte, error) {
-	bytes1, _ := json.Marshal(routes.All)
-	print("a6conf marshal 1=====", string(bytes1))
+	// bytes1, _ := json.Marshal(routes.All)
+	// print("a6conf marshal 1=====", string(bytes1))
 
 	embedElm(reflect.ValueOf(routes), routes.All)
 
 	// routes.All["labels"] = routes.Labels
 	bytes, error := json.Marshal(routes.All)
-	print("a6conf marshal 2=====", string(bytes))
+	// print("a6conf marshal 2=====", string(bytes))
 	return bytes, error
 }
 
@@ -239,19 +238,16 @@ func NewRoutes(value []byte) (A6Conf, error) {
 	}
 
 	if id, ok := routes.All["id"].(string); ok {
-		// if id == "web_25" {
-		// 	println("web_25 in NewRoutes", fmt.Sprintf("%v", string(value)))
-		// 	for key, value := range routes.All["labels"].(map[string]interface{}) {
-		// 		println(fmt.Sprintf("Key: %s, Value: %v", key, value))
-		// 	}
-		// }
 		if routes.Labels.ServiceName != "" {
-			println("====", id, "====> ", routes.Labels.ServiceName)
+			println("upstream nodes in route id: ", id, " will be synced with service: ", routes.Labels.ServiceName)
+			routes.Upstream.ServiceName = routes.Labels.ServiceName
+			routes.Upstream.DiscoveryType = routes.Labels.DiscoveryType
+			routes.Upstream.DiscoveryArgs = &UpstreamArg{
+				NamespaceID: routes.Labels.DiscoveryArgsNamespaceID,
+				GroupName:   routes.Labels.DiscoveryArgsGroupName,
+			}
 		}
 	}
-
-	routes.Upstream.ServiceName = routes.Labels.ServiceName
-	routes.Upstream.DiscoveryType = routes.Labels.DiscoveryType
 
 	if routes.Upstream.Nodes != nil {
 		routes.hasNodesAttr = true
