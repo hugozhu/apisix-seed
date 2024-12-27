@@ -107,11 +107,14 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 			continue
 		}
 
-		// if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
-		// 	all["_"+tagName] = val.Interface()
-		// 	delete(all, tagName)
-		// 	continue
-		// }
+		if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
+			typStr := typ.String()
+			if typStr == "message.Upstream" {
+				// all["_"+tagName] = val.Interface()
+				delete(all, tagName)
+				continue
+			}
+		}
 
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
@@ -196,11 +199,14 @@ func (routes *Routes) GetAll() *map[string]interface{} {
 }
 
 func (routes *Routes) Marshal() ([]byte, error) {
+	bytes1, _ := json.Marshal(routes.All)
+	print("a6conf marshal 1=====", string(bytes1))
+
 	embedElm(reflect.ValueOf(routes), routes.All)
 
 	// routes.All["labels"] = routes.Labels
 	bytes, error := json.Marshal(routes.All)
-	// print("a6conf marshal 2=====", string(bytes))
+	print("a6conf marshal 2=====", string(bytes))
 	return bytes, error
 }
 
@@ -236,7 +242,7 @@ func NewRoutes(value []byte) (A6Conf, error) {
 		// 	}
 		// }
 		if routes.Labels.ServiceName != "" {
-			print("====", id, "====>", routes.Labels.ServiceName)
+			println("====", id, "====> ", routes.Labels.ServiceName)
 		}
 	}
 
