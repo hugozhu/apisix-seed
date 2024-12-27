@@ -7,8 +7,8 @@ import (
 )
 
 type Labels struct {
-	ServiceName   string `json:"service_name,omitempty"`
 	DiscoveryType string `json:"discovery_type,omitempty"`
+	ServiceName   string `json:"service_name,omitempty"`
 }
 
 type UpstreamArg struct {
@@ -107,11 +107,11 @@ func embedElm(v reflect.Value, all map[string]interface{}) {
 			continue
 		}
 
-		if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
-			// all["_"+tagName] = val.Interface()
-			delete(all, tagName)
-			continue
-		}
+		// if fieldName == "DiscoveryType" || fieldName == "ServiceName" {
+		// 	all["_"+tagName] = val.Interface()
+		// 	delete(all, tagName)
+		// 	continue
+		// }
 
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
@@ -179,6 +179,11 @@ func NewUpstreams(value []byte) (A6Conf, error) {
 	return ups, nil
 }
 
+// "labels": {
+// 	"service_name":"aquaman-user",
+// 	"discovery_type":"nacos"
+// },
+
 type Routes struct {
 	Labels       Labels                 `json:"labels"`
 	Upstream     Upstream               `json:"upstream"`
@@ -193,7 +198,10 @@ func (routes *Routes) GetAll() *map[string]interface{} {
 func (routes *Routes) Marshal() ([]byte, error) {
 	embedElm(reflect.ValueOf(routes), routes.All)
 
-	return json.Marshal(routes.All)
+	// routes.All["labels"] = routes.Labels
+	bytes, error := json.Marshal(routes.All)
+	// print("a6conf marshal 2=====", string(bytes))
+	return bytes, error
 }
 
 func (routes *Routes) Inject(nodes interface{}) {
@@ -220,16 +228,25 @@ func NewRoutes(value []byte) (A6Conf, error) {
 		return nil, err
 	}
 
+	if id, ok := routes.All["id"].(string); ok {
+		// if id == "web_25" {
+		// 	println("web_25 in NewRoutes", fmt.Sprintf("%v", string(value)))
+		// 	for key, value := range routes.All["labels"].(map[string]interface{}) {
+		// 		println(fmt.Sprintf("Key: %s, Value: %v", key, value))
+		// 	}
+		// }
+		if routes.Labels.ServiceName != "" {
+			print("====", id, "====>", routes.Labels.ServiceName)
+		}
+	}
+
 	routes.Upstream.ServiceName = routes.Labels.ServiceName
 	routes.Upstream.DiscoveryType = routes.Labels.DiscoveryType
-
-	// if routes.Upstream.ServiceName != "" {
-	// 	println(routes.Upstream.ServiceName)
-	// }
 
 	if routes.Upstream.Nodes != nil {
 		routes.hasNodesAttr = true
 	}
+
 	return routes, nil
 }
 
