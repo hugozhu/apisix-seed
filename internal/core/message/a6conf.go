@@ -20,6 +20,7 @@ type Labels struct {
 	ServiceName              string `json:"service_name,omitempty"`
 	DiscoveryArgsNamespaceID string `json:"discovery_args.namespace_id,omitempty"`
 	DiscoveryArgsGroupName   string `json:"discovery_args.group_name,omitempty"`
+	ServiceGrpcPort          string `json:"service_grpc_port,omitempty"`
 }
 
 type UpstreamArg struct {
