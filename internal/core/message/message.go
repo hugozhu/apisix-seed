@@ -2,7 +2,6 @@ package message
 
 import (
 	"reflect"
-	"strconv"
 )
 
 type StoreEvent = int
@@ -60,23 +59,6 @@ func (msg *Message) DiscoveryType() string {
 		return up.DiscoveryType
 	}
 	return up.DupDiscoveryType
-}
-
-func (msg *Message) ServiceGrpcPort() int {
-	all := msg.a6Conf.GetAll()
-	if all == nil {
-		return 0
-	}
-	grpcPort, ok := (*all)["labels"].(map[string]interface{})["service_grpc_port"]
-	if !ok {
-		return 0
-	}
-	grpcPortInt, err := strconv.Atoi(grpcPort.(string))
-	if err != nil {
-		println("failed to convert grpc port %s to integer: %s", grpcPort, err)
-		return 0
-	}
-	return grpcPortInt
 }
 
 func (msg *Message) DiscoveryArgs() map[string]interface{} {

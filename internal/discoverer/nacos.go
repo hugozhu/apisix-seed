@@ -124,7 +124,7 @@ func (d *NacosDiscoverer) Stop() {
 
 func (d *NacosDiscoverer) Query(msg *message.Message) error {
 	serviceId := serviceID(msg.ServiceName(), msg.DiscoveryArgs())
-	println("Nacos: ", msg.ServiceName(), msg.DiscoveryArgs(), msg.ServiceGrpcPort())
+	println("Nacos: ", msg.ServiceName(), msg.DiscoveryArgs())
 	d.cacheMutex.Lock()
 	defer d.cacheMutex.Unlock()
 
@@ -138,9 +138,6 @@ func (d *NacosDiscoverer) Query(msg *message.Message) error {
 			id:   serviceId,
 			name: msg.ServiceName(),
 			args: msg.DiscoveryArgs(),
-			a6Conf: map[string]*message.Message{
-				serviceId: msg,
-			},
 		}
 		nodes, err := d.fetch(dis)
 		if err != nil {
@@ -261,7 +258,6 @@ func (d *NacosDiscoverer) fetch(service *NacosService) ([]*message.Node, error) 
 
 	// metadata
 	metadata := service.args["metadata"]
-	grpcPort := service.a6Conf[service.id].ServiceGrpcPort()
 	nodes := make([]*message.Node, 0)
 	for _, host := range serviceInfo.Hosts {
 		if metadata != nil {
@@ -280,13 +276,10 @@ func (d *NacosDiscoverer) fetch(service *NacosService) ([]*message.Node, error) 
 		if weight == 0 {
 			weight = d.weight
 		}
-		port := int(host.Port)
-		if grpcPort != 0 {
-			port = grpcPort
-		}
+
 		nodes = append(nodes, &message.Node{
 			Host:   host.Ip,
-			Port:   port,
+			Port:   int(host.Port),
 			Weight: weight,
 		})
 	}
@@ -294,7 +287,7 @@ func (d *NacosDiscoverer) fetch(service *NacosService) ([]*message.Node, error) 
 	return nodes, nil
 }
 
-func (d *NacosDiscoverer) newSubscribeCallback(serviceId string, metadata interface{}, grpcPort int) func([]model.SubscribeService, error) {
+func (d *NacosDiscoverer) newSubscribeCallback(serviceId string, metadata interface{}) func([]model.SubscribeService, error) {
 	return func(services []model.SubscribeService, err error) {
 		nodes := make([]*message.Node, 0)
 		meta, ok := metadata.(map[string]interface{})
@@ -317,14 +310,9 @@ func (d *NacosDiscoverer) newSubscribeCallback(serviceId string, metadata interf
 				weight = d.weight
 			}
 
-			port := int(inst.Port)
-			if grpcPort != 0 {
-				port = grpcPort
-			}
-
 			nodes = append(nodes, &message.Node{
 				Host:   inst.Ip,
-				Port:   port,
+				Port:   int(inst.Port),
 				Weight: weight,
 			})
 		}
@@ -351,11 +339,10 @@ func (d *NacosDiscoverer) subscribe(service *NacosService, client naming_client.
 	groupName, _ := service.args["group_name"].(string)
 	log.Infof("Nacos subscribe service: %s, groupName: %s", service.name, groupName)
 
-	grpcPort := service.a6Conf[service.id].ServiceGrpcPort()
 	param := &vo.SubscribeParam{
 		ServiceName:       service.name,
 		GroupName:         groupName,
-		SubscribeCallback: d.newSubscribeCallback(service.id, service.args["metadata"], grpcPort),
+		SubscribeCallback: d.newSubscribeCallback(service.id, service.args["metadata"]),
 	}
 
 	// TODO: retry if failed to Subscribe
