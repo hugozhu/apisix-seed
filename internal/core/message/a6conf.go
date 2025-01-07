@@ -226,10 +226,16 @@ func (routes *Routes) Marshal() ([]byte, error) {
 			return nil, fmt.Errorf("invalid grpc port configuration: failed to parse port %s to integer for route %s: %s", routes.Labels.ServiceGrpcPort, routes.All["id"], err)
 		}
 		if nodes, ok := routes.Upstream.Nodes.([]*Node); ok {
-			for _, node := range nodes {
-				node.Port = int(grpcPort)
-				log.Infof("updated gRPC port to %d for node %s in route %s", grpcPort, node.Host, routes.All["id"])
+			nodesCopy := make([]*Node, len(nodes))
+			for i, n := range nodes {
+				nodesCopy[i] = &Node{
+					Host:   n.Host,
+					Weight: n.Weight,
+					Port:   int(grpcPort),
+				}
+				log.Infof("updated gRPC port to %d for node %s in route %s", grpcPort, n.Host, routes.All["id"])
 			}
+			routes.Upstream.Nodes = nodesCopy
 		}
 	}
 
