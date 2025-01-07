@@ -2,8 +2,12 @@ package message
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
+
+	"github.com/api7/gopkg/pkg/log"
 )
 
 // Sample route config
@@ -12,7 +16,8 @@ import (
 // 	"discovery_args.group_name": "group_name",
 // 	"discovery_args.namespace_id": "test_name",
 // 	"discovery_type": "nacos",
-// 	"service_name": "test-service"
+// 	"service_name": "test-service",
+// 	"service_grpc_port": "10001"
 // },
 
 type Labels struct {
@@ -20,6 +25,7 @@ type Labels struct {
 	ServiceName              string `json:"service_name,omitempty"`
 	DiscoveryArgsNamespaceID string `json:"discovery_args.namespace_id,omitempty"`
 	DiscoveryArgsGroupName   string `json:"discovery_args.group_name,omitempty"`
+	ServiceGrpcPort          string `json:"service_grpc_port,omitempty"`
 }
 
 type UpstreamArg struct {
@@ -196,7 +202,8 @@ func NewUpstreams(value []byte) (A6Conf, error) {
 
 // "labels": {
 // 	"service_name":"aquaman-user",
-// 	"discovery_type":"nacos"
+// 	"discovery_type":"nacos",
+// 	"service_grpc_port":"10001"
 // },
 
 type Routes struct {
@@ -211,8 +218,26 @@ func (routes *Routes) GetAll() *map[string]interface{} {
 }
 
 func (routes *Routes) Marshal() ([]byte, error) {
-	// bytes1, _ := json.Marshal(routes.All)
-	// print("a6conf marshal 1=====", string(bytes1))
+	// If grpc port is configured, modify all nodes' port to grpc port
+	if routes.Labels.ServiceGrpcPort != "" && routes.Upstream.Nodes != nil {
+		grpcPort, err := strconv.ParseInt(routes.Labels.ServiceGrpcPort, 10, 64)
+		if err != nil {
+			log.Errorf("invalid grpc port configuration: failed to parse port %s to integer for route %s: %s", routes.Labels.ServiceGrpcPort, routes.All["id"], err)
+			return nil, fmt.Errorf("invalid grpc port configuration: failed to parse port %s to integer for route %s: %s", routes.Labels.ServiceGrpcPort, routes.All["id"], err)
+		}
+		if nodes, ok := routes.Upstream.Nodes.([]*Node); ok {
+			nodesCopy := make([]*Node, len(nodes))
+			for i, n := range nodes {
+				nodesCopy[i] = &Node{
+					Host:   n.Host,
+					Weight: n.Weight,
+					Port:   int(grpcPort),
+				}
+				log.Infof("updated gRPC port to %d for node %s in route %s", grpcPort, n.Host, routes.All["id"])
+			}
+			routes.Upstream.Nodes = nodesCopy
+		}
+	}
 
 	embedElm(reflect.ValueOf(routes), routes.All)
 
