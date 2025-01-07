@@ -46,8 +46,10 @@ func initLogger(logConf *conf.Log) error {
 	return nil
 }
 
+var VERSION = 1.1
+
 func main() {
-	println("=========== starting ============")
+	println("=========== version ", VERSION, " ============")
 
 	conf.InitConf()
 
